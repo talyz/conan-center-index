@@ -12,6 +12,7 @@ class NinjaConan(ConanFile):
     exports_sources = ["CMakeLists.txt", "*.patch"]
     generators = "cmake"
     topics = ("conan", "ninja", "build")
+    build_requires = "cmake/[>=3.15]"
 
     _source_subfolder = "source_subfolder"
     _cmake = None
