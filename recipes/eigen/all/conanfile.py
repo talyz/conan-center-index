@@ -35,8 +35,10 @@ class EigenConan(ConanFile):
         self.info.header_only()
 
     def package_info(self):
-        self.cpp_info.names["cmake_find_package"] = "Eigen3"
-        self.cpp_info.names["cmake_find_package_multi"] = "Eigen3"
+        self.cpp_info.names["cmake_find_package"] = "EIGEN3"
+        self.cpp_info.filenames["cmake_find_package"] = "Eigen3"
+        self.cpp_info.names["cmake_find_package_multi"] = "EIGEN3"
+        self.cpp_info.filenames["cmake_find_package_multi"] = "Eigen3"
         self.cpp_info.names["pkg_config"] = "eigen3"
         self.cpp_info.components["eigen3"].names["cmake_find_package"] = "Eigen"
         self.cpp_info.components["eigen3"].names["cmake_find_package_multi"] = "Eigen"
