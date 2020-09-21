@@ -7,4 +7,4 @@ conan_basic_setup()
 find_package(Eigen3 REQUIRED)
 
 add_executable(${PROJECT_NAME} test_package.cpp)
-target_link_libraries(${PROJECT_NAME} Eigen3::Eigen)
+target_link_libraries(${PROJECT_NAME} EIGEN3::Eigen)
