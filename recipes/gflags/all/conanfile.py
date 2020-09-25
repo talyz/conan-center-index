@@ -61,6 +61,10 @@ class GflagsConan(ConanFile):
         tools.rmdir(os.path.join(self.package_folder, "lib", "cmake"))
 
     def package_info(self):
+        self.cpp_info.names["cmake_find_package"] = "GFLAGS"
+        self.cpp_info.filenames["cmake_find_package"] = "gflags"
+        self.cpp_info.names["cmake_find_package_multi"] = "GFLAGS"
+        self.cpp_info.filenames["cmake_find_package_multi"] = "gflags"
         self.cpp_info.libs = tools.collect_libs(self)
         if self.settings.os == "Windows":
             self.cpp_info.libs.extend(['shlwapi'])
