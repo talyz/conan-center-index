@@ -53,12 +53,37 @@ class GflagsConan(ConanFile):
         cmake = self._configure_cmake()
         cmake.build()
 
+    _shared_ext_mapping = {
+        "Linux": ".so",
+        "Windows": ".dll",
+        "Macos": ".dylib",
+    }
+
+    _static_ext_mapping = {
+        "Linux": ".a",
+        "Windows": ".lib",
+        "Macos": ".a",
+    }
+
     def package(self):
         self.copy("COPYING.txt", dst="licenses", src=self._source_subfolder)
         cmake = self._configure_cmake()
         cmake.install()
         tools.rmdir(os.path.join(self.package_folder, "lib", "pkgconfig"))
         tools.rmdir(os.path.join(self.package_folder, "lib", "cmake"))
+
+        if self.options.shared:
+            buildtype = "_shared"
+            suffix = self._shared_ext_mapping[str(self.settings.os)]
+        else:
+            buildtype = "_static"
+            suffix = self._static_ext_mapping[str(self.settings.os)]
+
+        name = "gflags" if self.settings.os == "Windows" else "libgflags"
+        nothreads = "_nothreads" if self.options.nothreads else ""
+        libname = name + nothreads + buildtype + suffix
+        tools.rename(os.path.join(self.package_folder, "lib", libname),
+                     os.path.join(self.package_folder, "lib", f"gflags{suffix}"))
 
     def package_info(self):
         self.cpp_info.names["cmake_find_package"] = "GFLAGS"
