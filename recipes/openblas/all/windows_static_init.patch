@@ -1,0 +1,16 @@
+diff --git a/driver/others/blas_server_win32.c b/driver/others/blas_server_win32.c
+index 5ecc4428..62512d67 100644
+--- a/driver/others/blas_server_win32.c
++++ b/driver/others/blas_server_win32.c
+@@ -348,9 +348,9 @@ int blas_thread_init(void){
+ 
+ int exec_blas_async(BLASLONG pos, blas_queue_t *queue){
+ 
+-#if defined(SMP_SERVER) && defined(OS_CYGWIN_NT)
++#if defined(SMP_SERVER) && (defined(OS_CYGWIN_NT) || defined(OS_WINNT))
+   // Handle lazy re-init of the thread-pool after a POSIX fork
+-  if (unlikely(blas_server_avail == 0)) blas_thread_init();
++  if (blas_server_avail == 0) blas_thread_init();
+ #endif
+ 
+   blas_queue_t *current;
