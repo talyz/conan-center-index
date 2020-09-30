@@ -28,7 +28,7 @@ class OpenblasConan(ConanFile):
         "use_thread": True,
         "dynamic_arch": False
     }
-    exports_sources = ["CMakeLists.txt"]
+    exports_sources = ["CMakeLists.txt", "windows_static_init.patch"]
     generators = "cmake"
 
     _cmake = None
@@ -68,6 +68,10 @@ class OpenblasConan(ConanFile):
         return self._cmake
 
     def build(self):
+        if self.settings.os == "Windows" and not self.options.shared:
+            tools.patch(patch_file="windows_static_init.patch",
+                        base_path=self._source_subfolder)
+
         cmake = self._configure_cmake()
         cmake.build()
 
