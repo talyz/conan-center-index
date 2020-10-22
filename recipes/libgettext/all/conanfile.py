@@ -105,6 +105,9 @@ class GetTextConan(ConanFile):
             with tools.environment_append(VisualStudioBuildEnvironment(self).vars) if self._is_msvc else tools.no_op():
                 with tools.chdir(os.path.join(self._source_subfolder, self._gettext_folder)):
                     env_build = AutoToolsBuildEnvironment(self, win_bash=tools.os_info.is_windows)
+                    if tools.is_apple_os(self.settings.os) and self.settings.get_safe("os.version"):
+                        target = tools.apple_deployment_target_flag(self.settings.os, self.settings.os.version)
+                        env_build.flags.append(target)
                     if self._is_msvc:
                         env_build.flags.append("-FS")
                     env_build.configure(args=args, build=build, host=host)
