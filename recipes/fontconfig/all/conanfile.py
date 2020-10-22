@@ -49,6 +49,9 @@ class FontconfigConan(ConanFile):
             args.append("--datarootdir=%s" % os.path.join(self.package_folder, "bin", "share"))
             args.append("--localstatedir=%s" % os.path.join(self.package_folder, "bin", "var"))
             self._autotools = AutoToolsBuildEnvironment(self)
+            if tools.is_apple_os(self.settings.os) and self.settings.get_safe("os.version"):
+                target = tools.apple_deployment_target_flag(self.settings.os, self.settings.os.version)
+                self._autotools.flags.append(target)            
             self._autotools.configure(configure_dir=self._source_subfolder, args=args)
             tools.replace_in_file("Makefile", "po-conf test", "po-conf")
         return self._autotools
