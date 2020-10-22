@@ -111,6 +111,10 @@ class LibiconvConan(ConanFile):
         else:
             configure_args.extend(["--enable-static", "--disable-shared"])
 
+        if tools.is_apple_os(self.settings.os) and self.settings.get_safe("os.version"):
+            target = tools.apple_deployment_target_flag(self.settings.os, self.settings.os.version)
+            self._autotools.flags.append(target)
+
         if self._is_msvc:
             self._autotools.flags.append("-FS")
 
