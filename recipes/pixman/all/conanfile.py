@@ -68,6 +68,9 @@ class PixmanConan(ConanFile):
             else:
                 args.extend(["--enable-static", "--disable-shared"])
             self._autotools = AutoToolsBuildEnvironment(self, win_bash=tools.os_info.is_windows)
+            if tools.is_apple_os(self.settings.os) and self.settings.get_safe("os.version"):
+                target = tools.apple_deployment_target_flag(self.settings.os, self.settings.os.version)
+                self._autotools.flags.append(target)
             self._autotools.configure(configure_dir=self._source_subfolder, args=args)
         return self._autotools
 
