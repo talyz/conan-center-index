@@ -1,13 +1,15 @@
 from conan import ConanFile
 from conan.tools.scm import Version
-from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
+from conan.tools.env import VirtualBuildEnv
+from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
 from conan.tools.build import check_min_cppstd
-from conan.tools.files import get, save, copy, export_conandata_patches, apply_conandata_patches
+from conan.tools.files import get, rm, save, apply_conandata_patches, copy
 from conan.errors import ConanInvalidConfiguration
 from os.path import join
 import textwrap
 
-required_conan_version = ">=1.52.0"
+
+required_conan_version = ">=1.51.3"
 
 
 class TensorflowLiteConan(ConanFile):
@@ -40,16 +42,22 @@ class TensorflowLiteConan(ConanFile):
     short_paths = True
 
     @property
+    def _minimum_cpp_standard(self):
+        return 17 if Version(self.version) >= "2.9.1" else 14
+
+    @property
     def _compilers_minimum_version(self):
         return {
             "gcc": "8",
             "Visual Studio": "15.8",
             "clang": "5",
+            "msvc": "1900",
             "apple-clang": "5.1",
         }
 
     def export_sources(self):
-        export_conandata_patches(self)
+        for p in self.conan_data.get("patches", {}).get(self.version, []):
+            copy(self, p["patch_file"], self.recipe_folder, self.export_sources_folder)
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -61,10 +69,16 @@ class TensorflowLiteConan(ConanFile):
 
     def configure(self):
         if self.options.shared:
-            del self.options.fPIC
+            try:
+                del self.options.fPIC
+            except Exception:
+                pass
+
+    def layout(self):
+        cmake_layout(self, src_folder="src")
 
     def requirements(self):
-        self.requires("abseil/20211102.0")
+        self.requires("abseil/20220623.0")
         self.requires("eigen/3.4.0")
         self.requires("farmhash/cci.20190513")
         self.requires("fft/cci.20061228")
@@ -78,46 +92,46 @@ class TensorflowLiteConan(ConanFile):
         if self.options.with_xnnpack or self.options.get_safe("with_nnapi", False):
             self.requires("fp16/cci.20210320")
 
-    def build_requirements(self):
-        self.tool_requires("cmake/3.24.0")
-
     def validate(self):
-        if self.settings.compiler.get_safe("cppstd"):
-            check_min_cppstd(self, 17)
+        if self.info.settings.compiler.cppstd:
+            check_min_cppstd(self, self._minimum_cpp_standard)
 
         minimum_version = self._compilers_minimum_version.get(str(self.settings.compiler), False)
         if not minimum_version:
-            self.output.warn(f"{self.name} requires C++14. Your compiler is unknown. Assuming it supports C++17.")
+            self.output.warn(f"{self.name} requires C++{self._minimum_cpp_standard}. Your compiler is unknown. Assuming it supports C++{self._minimum_cpp_standard}.")
         elif Version(self.settings.compiler.version) < minimum_version:
-            raise ConanInvalidConfiguration(f"{self.name} requires C++17, which your compiler does not support.")
+            raise ConanInvalidConfiguration(f"{self.name} requires C++{self._minimum_cpp_standard}, which your compiler does not support.")
+
+    def build_requirements(self):
+        self.tool_requires("cmake/3.24.0")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version], strip_root=True, destination=self.source_folder)
+
+    def generate(self):
+        tc = CMakeToolchain(self)
+        tc.cache_variables["CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS"] = True
+        tc.variables["TFLITE_ENABLE_RUY"] = self.options.with_ruy
+        tc.variables["TFLITE_ENABLE_NNAPI"] = self.options.get_safe("with_nnapi", False)
+        tc.variables["TFLITE_ENABLE_GPU"] = False
+        tc.variables["TFLITE_ENABLE_XNNPACK"] = self.options.with_xnnpack
+        tc.variables["TFLITE_ENABLE_MMAP"] = self.options.get_safe("with_mmap", False)
+        tc.variables["FETCHCONTENT_FULLY_DISCONNECTED"] = True
+        tc.variables["clog_POPULATED"] = True
+        if self.settings.arch == "armv8":
+            # INFO: Not defined by Conan for Apple Silicon. See https://github.com/conan-io/conan/pull/8026
+            tc.cache_variables["CMAKE_SYSTEM_PROCESSOR"] = "arm64"
+        tc.generate()
+        tc = CMakeDeps(self)
+        tc.generate()
+        tc = VirtualBuildEnv(self)
+        tc.generate
 
     def build(self):
         apply_conandata_patches(self)
         cmake = CMake(self)
         cmake.configure(build_script_folder=join("tensorflow", "lite"))
         cmake.build()
-
-    def generate(self):
-        tc = CMakeToolchain(self)
-        tc.variables.update({
-            "CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS": True,
-            "TFLITE_ENABLE_RUY": self.options.with_ruy,
-            "TFLITE_ENABLE_NNAPI": self.options.get_safe("with_nnapi", False),
-            "TFLITE_ENABLE_GPU": False,
-            "TFLITE_ENABLE_XNNPACK": self.options.with_xnnpack,
-            "TFLITE_ENABLE_MMAP": self.options.get_safe("with_mmap", False),
-            "FETCHCONTENT_FULLY_DISCONNECTED": True,
-            "clog_POPULATED": True,
-        })
-        if self.settings.arch == "armv8":
-            # Not defined by Conan for Apple Silicon. See https://github.com/conan-io/conan/pull/8026
-            tc.variables["CMAKE_SYSTEM_PROCESSOR"] = "arm64"
-        tc.generate()
-        deps = CMakeDeps(self)
-        deps.generate()
 
     @staticmethod
     def _create_cmake_module_alias_target(self, module_file):
