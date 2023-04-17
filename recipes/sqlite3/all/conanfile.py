@@ -30,6 +30,7 @@ class Sqlite3Conan(ConanFile):
         "enable_fts3_parenthesis": [True, False],
         "enable_fts4": [True, False],
         "enable_fts5": [True, False],
+        "enable_icu": [True, False],
         "enable_json1": [True, False],
         "enable_soundex": [True, False],
         "enable_preupdate_hook": [True, False],
@@ -59,6 +60,7 @@ class Sqlite3Conan(ConanFile):
         "enable_fts3_parenthesis": False,
         "enable_fts4": False,
         "enable_fts5": False,
+        "enable_icu": False,
         "enable_json1": False,
         "enable_soundex": False,
         "enable_preupdate_hook": False,
@@ -123,6 +125,7 @@ class Sqlite3Conan(ConanFile):
         tc.variables["ENABLE_FTS3_PARENTHESIS"] = self.options.enable_fts3_parenthesis
         tc.variables["ENABLE_FTS4"] = self.options.enable_fts4
         tc.variables["ENABLE_FTS5"] = self.options.enable_fts5
+        tc.variables["ENABLE_ICU"] = self.options.enable_icu
         tc.variables["ENABLE_JSON1"] = self.options.enable_json1
         tc.variables["ENABLE_PREUPDATE_HOOK"] = self.options.enable_preupdate_hook
         tc.variables["ENABLE_SOUNDEX"] = self.options.enable_soundex
@@ -187,6 +190,10 @@ class Sqlite3Conan(ConanFile):
     def _module_file_rel_path(self):
         return os.path.join("lib", "cmake", f"conan-official-{self.name}-variables.cmake")
 
+    def requirements(self):
+        if self.options.enable_icu:
+            self.requires("icu/70.1")
+
     def package_info(self):
         self.cpp_info.set_property("cmake_find_mode", "both")
         self.cpp_info.set_property("cmake_file_name", "SQLite3")
@@ -195,6 +202,11 @@ class Sqlite3Conan(ConanFile):
 
         # TODO: back to global scope in conan v2 once cmake_find_package_* generators removed
         self.cpp_info.components["sqlite"].libs = ["sqlite3"]
+        if self.options.enable_icu:
+            self.cpp_info.components["sqlite"].requires = ["icu::icu-data",
+                                                           "icu::icu-i18n",
+                                                           "icu::icu-uc",
+                                                           "icu::icu-data-alias"]
         if self.options.omit_load_extension:
             self.cpp_info.components["sqlite"].defines.append("SQLITE_OMIT_LOAD_EXTENSION")
         if self.settings.os in ["Linux", "FreeBSD"]:
